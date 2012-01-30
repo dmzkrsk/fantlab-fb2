@@ -893,7 +893,11 @@ class MainWindow(QWidget):
         #noinspection PyUnresolvedReferences
         self.filelist.processCompleted.connect(self.processCompleted)
         author = self.searchResults.itemData(self.searchResults.currentIndex()).toPyObject()
-        self.filelist.process(author, strict, self.booklist.currentSelection())
+
+        indexes = self.booklist.currentSelection()
+        if not len(indexes):
+            indexes = [self.filelist.index(row, 0) for row in xrange(self.filelist.rowCount())]
+        self.filelist.process(author, strict, indexes)
 
     def stop(self):
         self.stopButton.setEnabled(False)
