@@ -27,7 +27,7 @@ def work_item(e):
     return int(id), e.text
 
 class Author(object):
-    URL = 'http://fantlab.ru/autor%(id)d'
+    URL = 'http://pda.fantlab.ru/autor%(id)d'
     SEARCH = 'http://pda.fantlab.ru/search'
 
     web = WebClient()
