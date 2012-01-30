@@ -198,13 +198,11 @@ class Filelist(QAbstractItemModel):
     ############################################3
 
     def _dataAvailable(self, bf, data):
-        self.beginResetModel()
         bf.setMeta(*data)
-        self.endResetModel()
+        row = self.data.index(bf)
+        self.rowChanged(row)
 
     def _bookFinished(self, task):
-        self.beginResetModel()
-
         try:
             message = task.getResult()
             task.bf.setMessage(self.ICON_FB, message)
@@ -217,21 +215,22 @@ class Filelist(QAbstractItemModel):
         except Exception, e:
             task.bf.setMessage(self.ICON_ERROR, u'Неизвестная ошибка', unicode(e))
 
-        self.endResetModel()
+        row = self.data.index(task.bf)
+        self.rowChanged(row)
 
     def _bookStarted(self, task):
-        self.beginResetModel()
         task.bf.setMessage(None, u'Файл обрабатывается')
-        self.endResetModel()
+        row = self.data.index(task.bf)
+        self.rowChanged(row)
 
     def stop(self):
         self.processThread.finish()
 
     def processComplete(self):
-        self.beginResetModel()
         for t in self.processThread.tasksLeft:
             t.bf.setMessage(None, u'Остановлено')
-        self.endResetModel()
+            row = self.data.index(t.bf)
+            self.rowChanged(row)
 
         self.processThread = None
         #noinspection PyUnresolvedReferences
@@ -248,15 +247,14 @@ class Filelist(QAbstractItemModel):
 
         self.processThread = ProcessBooks(author, strict)
 
-        self.beginResetModel()
         for index in selection:
             bf = index.internalPointer()
             bf.setMessage(None, u'Подготавливаем файл')
+            self.rowChanged(index.row())
             p = ProcessBook(bf, author, strict)
             #noinspection PyUnresolvedReferences
             p.dataAvailable.connect(self._dataAvailable)
             self.processThread.addTask(p)
-        self.endResetModel()
 
         self.processThread.finished.connect(self.processComplete)
         #noinspection PyUnresolvedReferences
@@ -264,6 +262,12 @@ class Filelist(QAbstractItemModel):
         #noinspection PyUnresolvedReferences
         self.processThread.taskStart.connect(self._bookStarted)
         self.processThread.start()
+
+    def rowChanged(self, row):
+        self.dataChanged.emit(
+            self.index(row, 0),
+            self.index(row, self.rowCount())
+        )
 
 class ProcessBook(Task):
     dataAvailable = pyqtSignal(BookItem, object)
@@ -898,6 +902,7 @@ class MainWindow(QWidget):
         if not len(indexes):
             indexes = [self.filelist.index(row, 0) for row in xrange(self.filelist.rowCount())]
         self.filelist.process(author, strict, indexes)
+        self.booklist.setFocus()
 
     def stop(self):
         self.stopButton.setEnabled(False)
